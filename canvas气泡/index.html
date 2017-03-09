@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html>
+
+	<head>
+		<meta charset="utf-8" />
+		<title></title>
+		<script src="http://libs.baidu.com/jquery/1.9.0/jquery.js"></script>
+		<style>
+			* {
+				margin: 0;
+				padding: 0;
+			}
+			
+			#canvas {
+				background-color: #000;
+			}
+			
+			#nav {
+				width: 130px;
+				height: 400px;
+				position: absolute;
+				left: 0;
+				right: 0;
+				top: 0;
+				bottom: 0;
+				margin: auto;
+				list-style: none;
+			}
+			
+			#nav li {
+				position: absolute;
+				left: 0px;
+				top: 0px;
+				transform-origin: 25px 375px;
+				box-shadow: 2px 2px 10px #444;
+				transition: all .5s;
+				font-size: 0;
+			}
+		</style>
+		<script type="text/javascript">
+			$(function() {
+				var $size = $("#nav li").length;
+				var $on_off = true;
+				var $deg;
+				$("#nav li:last").on("click", function() {
+					for(var i = 0; i < $size; i++) {
+						if($on_off) {
+							$deg = -15 * (Math.floor($size / 2) - i);
+						} else {
+							$deg = 360;
+						}
+						$("#nav li").eq(i).css("transform", "rotate(" + $deg + "deg)");
+					}
+					$on_off = !$on_off;
+				});
+
+				//展开后每个卡片的点击事件
+				var $leftDeg = 0;
+				var $rightDeg = 0;
+				var $currentIndex;
+				$("#nav li:not('#nav li:last')").on("click", function() {
+					$(this).css('transform', 'rotate(0deg)');
+					//拿到当前点击的索引值
+					$currentIndex = $(this).index();
+					//左侧效果：
+					for(var i = $currentIndex - 1; i >= 0; i--) {
+						$leftDeg = -15 * ($currentIndex - i);
+						$("#nav li").eq(i).css("transform", "rotate(" + $leftDeg + "deg)");
+					}
+					//右侧效果：
+					for(var i = $currentIndex + 1; i < $size; i++) {
+						$rightDeg = 15 * (i - $currentIndex) + 15;
+						$("#nav li").eq(i).css("transform", "rotate(" + $rightDeg + "deg)");
+					}
+				});
+
+				//canvas气泡效果
+				var $canvas = $("#canvas");
+				var canvas = $("#canvas").get(0);
+				var colors = ['#69D2E7', '#A7DBD8', '#E0E4CC', '#F38630', '#FA6900', '#FF4E50', '#F9D423'];
+				var balls = [];
+				var timer;
+				var on=true;/*定时器开关*/
+				canvas.width = window.innerWidth;
+				canvas.height = window.innerHeight + 400;//创建2D画布\
+//				$canvas.width(window.innerWidth);
+//				$canvas.height(window.innerHeight+400);
+				var w=canvas.width;
+				var h=canvas.height;
+
+				if(canvas.getContext) {
+					var context = canvas.getContext('2d');
+					console.log(context);
+				}
+				/*
+				 ball 对象
+				 * ball.x 横坐标
+				 * ball.y 纵坐标
+				 * ball.r 圆的半径
+				 * ball.vx 横向速度
+				 * ball.vy 纵向速度
+				 * ball.color 颜色
+				 * */
+				//声明函数 -在画布上画出ball对象描述的圆
+				function draw(ball) {
+					context.beginPath();
+					context.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
+					context.fillStyle = ball.color;
+					context.globalCompositeOperation='lighter';
+					context.fill();
+				}
+				//声明函数 -更新每个圆的状态，并调用draw 展示
+				function refreshAndDraw() {
+					//刷新 所有圆的位置和大小
+//					alert(w+'___'+h);
+					context.clearRect(0, 0, w,h);
+					for(var i = 0; i < balls.length; i++) {
+						balls[i].x += balls[i].vx * 8;
+						balls[i].y += balls[i].vy * 8;
+						balls[i].r = balls[i].r * 0.94;
+						balls[i].index=i; /*为小球添加一个index属性来记录他的索引，在删除的时候使用该索引删除*/
+						//更新状态后发现当前小球半径过小就不在绘制了，而是从数组中删除该元素
+						if(balls[i].r<1){
+							balls.splice(balls[i].index,1);
+							continue;
+						}
+						draw(balls[i]); /*绘制当前圆*/
+					}
+					if(!balls.length){
+						clearInterval(timer);
+						on=true;
+						console.warn('balls长度为0，停止执行refreshAndDraw');
+					}
+				}
+				//声明函数 -得到[min,max]区间的随机数
+				function random(min, max) {
+					return Math.round(Math.random() * (max - min) + min);
+				}
+				//注册鼠标移动事件
+				$canvas.on('mousemove', function(event) {
+					//第一部分：for循环用来在鼠标移动的时候不断生成新的气泡
+					for(var i = 0; i < 2; i++) {
+						var ball = {
+							x: event.pageX + random(-5, 5),
+							y: event.pageY + random(-5, 5),
+							r: random(10, 45),
+							vx: Math.random() - 0.5,
+							vy: Math.random() - 0.5,
+							color: colors[random(0, colors.length - 1)]
+						};
+						balls.push(ball);
+						if(balls.length > 300) {
+							balls.shift();
+						}
+					}
+					//第二部分：调用 refreshAndDraw 再画布上绘制
+					if(on){
+						clearInterval(timer);
+						timer=setInterval(refreshAndDraw,30);
+						on=false;
+					}
+					
+//					console.log(balls);
+				});
+
+			}); /*ready事件*/
+		</script>
+	</head>
+
+	<body>
+		<canvas id="canvas"  width="" height=""></canvas>
+		<ul id="nav">
+			<li><img src="img/img1.png" alt="" /></li>
+			<li><img src="img/img2.png" alt="" /></li>
+			<li><img src="img/img3.png" alt="" /></li>
+			<li><img src="img/img4.png" alt="" /></li>
+			<li><img src="img/img5.png" alt="" /></li>
+			<li><img src="img/img6.png" alt="" /></li>
+			<li><img src="img/img7.png" alt="" /></li>
+			<li><img src="img/img8.png" alt="" /></li>
+			<li><img src="img/img9.png" alt="" /></li>
+			<li><img src="img/img10.png" alt="" /></li>
+			<li><img src="img/img11.png" alt="" /></li>
+			<li><img src="img/img12.png" alt="" /></li>
+		</ul>
+	</body>
+
+</html>
